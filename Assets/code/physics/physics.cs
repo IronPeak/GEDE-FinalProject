@@ -1,83 +1,127 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 
 public class physics : MonoBehaviour
 {
-    bool collided = false;
-    bool hasexited = true;
     Rigidbody rb;
-    Vector3 lastpos;
-    Vector3 collnormal;
-    [SerializeField]
-    Vector3 gravity = new Vector3(0, 0, 0);
-    [SerializeField]
-    Vector3 velocity = new Vector3(0.1f, 0, 0);
-    [SerializeField]
-    float bouncyness = 1;
-    [SerializeField]
-    float friction = 0;
-    //ideas for later:
-    //air resistance,
-    //wind force
-    //stickyness
+    Vector3 lastvel;
+    bool collided = false;
+    List<Collision> colliderNormals;
+    public Vector3 gravity = new Vector3(0, 0, 0);
+    public Vector3 velocity = new Vector3(0.1f, 0, 0);
+    public float bouncyness = 1;
+    public float friction = 0;
 
-
-    // Use this for initialization
     void Start()
     {
-        collnormal = Vector3.zero;
+        colliderNormals = new List<Collision>();
         rb = GetComponent<Rigidbody>();
     }
 
-    // Update is called once per frame
     void FixedUpdate()
     {
-        if(collided && hasexited)
+        if (colliderNormals.Count >= 1)
         {
-            //if the vectors almost cancel each other out, assume that they did and fully reflect the vector
-            Bounce(collnormal);
-            velocity += gravity * Time.fixedDeltaTime;
-            rb.MovePosition(transform.position += velocity * Time.fixedDeltaTime);
-            hasexited = false;
-        }
-        else if(collided)
-        {
+            collided = true;
+            velocity = Contact();
+            velocity = gravityCorrection();
+            transform.position += velocity * Time.fixedDeltaTime;
         }
         else
         {
-            velocity += gravity * Time.fixedDeltaTime;
-            lastpos = transform.position;
-            Debug.DrawRay(transform.position, velocity.normalized, Color.red, 5);
+            if (collided) {
+
+                Vector3 tempvel = velocity + gravity * Time.fixedDeltaTime;
+                if (!spherecollision(tempvel))
+                {
+                    velocity = tempvel;
+                    collided = false;
+                }
+            }
+            else
+            {
+                velocity += gravity * Time.fixedDeltaTime;
+            }
             rb.MovePosition(transform.position += velocity * Time.fixedDeltaTime);
-            hasexited = true;
         }
-        collnormal = Vector3.zero;
+        lastvel = velocity;
+    }
+
+    bool spherecollision(Vector3 direction)
+    {
+        return Physics.OverlapSphere(transform.position + direction * Time.deltaTime, 0.5f).Length >= 2;
     }
 
     void OnCollisionEnter(Collision collision)
     {
-        collided = true;
-        foreach(ContactPoint contact in collision.contacts)
-        {
-            Debug.DrawRay(contact.point, contact.normal * 5, Color.black, 5);
-        }
-        collnormal += collision.contacts[0].normal;
-        transform.position = lastpos;
-
+        colliderNormals.Add(collision);
     }
 
     void OnCollisionExit(Collision collision)
     {
-        collided = false;
+        for (int i = 0; i < colliderNormals.Count; i++)
+        {
+            if (collision.collider.GetInstanceID() == colliderNormals[i].collider.GetInstanceID())
+            {
+                colliderNormals.RemoveAt(i);
+                return;
+            }
+        }
     }
 
-    //includes friction
-    void Bounce(Vector3 normal)
+    Vector3 Contact()
     {
-        Vector3 neg = -velocity;
-        Vector3 proj = Vector3.Project(neg, normal.normalized);
-        velocity = (velocity + proj) * (1 - friction) + proj * bouncyness;
-        Debug.DrawRay(transform.position, velocity, Color.green, 5);
-        Debug.Log(normal);
+        bool done = false;
+        Vector3 tempvel = velocity;
+        while (!done)
+        {
+            done = true;
+            foreach (Collision coll in colliderNormals)
+            {
+                Vector3 normal = coll.contacts[0].normal;
+                if (Vector3.Dot(tempvel, normal) < 0)
+                {
+                    Vector3 neg = -tempvel;
+                    Vector3 proj = Vector3.Project(neg, normal.normalized);
+                    tempvel = (tempvel + proj) * (1 - friction) + proj * bouncyness;
+                    done = false;
+                }
+            }
+        }
+        return tempvel;
+    }
+
+    Vector3 gravityCorrection()
+    {
+        bool done = false;
+        Vector3 tempvel = velocity + gravity * Time.fixedDeltaTime;
+        bool[] grounded = new bool[colliderNormals.Count];
+        for (int i = 0; i < colliderNormals.Count; i++)
+        {
+            grounded[i] = false;
+        }
+        int count = 0;
+        while (!done)
+        {
+            count++;
+            done = true;
+            for (int i = 0; i < colliderNormals.Count; i++)
+            {
+                Vector3 normal = colliderNormals[i].contacts[0].normal;
+                if (Vector3.Dot((tempvel), normal) < 0)
+                {
+                    Vector3 neg = -tempvel;
+                    Vector3 proj = Vector3.Project(neg, normal.normalized);
+                    tempvel = tempvel + proj;
+                    grounded[i] = true;
+                    done = false;
+                }
+            }
+            if (count > 50)
+            {
+                return tempvel - gravity * Time.fixedDeltaTime * 0.5f;
+            }
+        }
+        return tempvel - gravity * Time.fixedDeltaTime * 0.5f;
     }
 }
