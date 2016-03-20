@@ -1,18 +1,22 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class physics : MonoBehaviour
+public class PhysicsObject : MonoBehaviour
 {
     Rigidbody rb;
     Vector3 lastvel;
     bool collided = false;
     List<Collision> colliderNormals;
+    public Vector3 GlobalGravity = new Vector3(0, 0, 0);
     public Vector3 gravity = new Vector3(0, 0, 0);
-    public Vector3 velocity = new Vector3(0.1f, 0, 0);
+    public Vector3 velocity = new Vector3(0, 0, 0);
     public float bouncyness = 1;
     public float friction = 0;
+    public float mass = 1;
 
-    void Start()
+    public float maxVelocity = 0;
+
+    void Awake()
     {
         colliderNormals = new List<Collision>();
         rb = GetComponent<Rigidbody>();
@@ -20,12 +24,12 @@ public class physics : MonoBehaviour
 
     void FixedUpdate()
     {
+        gravity = CalculateGravity();
         if (colliderNormals.Count >= 1)
         {
             collided = true;
             velocity = Contact();
             velocity = gravityCorrection();
-            transform.position += velocity * Time.fixedDeltaTime;
         }
         else
         {
@@ -42,9 +46,28 @@ public class physics : MonoBehaviour
             {
                 velocity += gravity * Time.fixedDeltaTime;
             }
-            rb.MovePosition(transform.position += velocity * Time.fixedDeltaTime);
         }
+        if(maxVelocity != 0 && maxVelocity < velocity.magnitude)
+        {
+            velocity = velocity.normalized * maxVelocity;
+        }
+        transform.position += velocity * Time.fixedDeltaTime;
         lastvel = velocity;
+    }
+
+    Vector3 CalculateGravity()
+    {
+        Vector3 gravity = GlobalGravity;
+        for(int i = 0; i < GravityObject.Objects.Count; i++)
+        {
+            GravityObject obj = GravityObject.Objects[i];
+            if(obj.gameObject == gameObject)
+                continue;
+            Vector3 direction = obj.transform.position - transform.position;
+            float distance = Vector3.Distance(obj.transform.position, transform.position);
+            gravity += (direction.normalized / (distance * distance + 1f)) * obj.Mass * mass;
+        }
+        return gravity;
     }
 
     bool spherecollision(Vector3 direction)
@@ -73,8 +96,10 @@ public class physics : MonoBehaviour
     {
         bool done = false;
         Vector3 tempvel = velocity;
+        int count = 0;
         while (!done)
         {
+            count++;
             done = true;
             foreach (Collision coll in colliderNormals)
             {
@@ -86,6 +111,10 @@ public class physics : MonoBehaviour
                     tempvel = (tempvel + proj) * (1 - friction) + proj * bouncyness;
                     done = false;
                 }
+            }
+            if(count > 20)
+            {
+                return -velocity;
             }
         }
         return tempvel;
