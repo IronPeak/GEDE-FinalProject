@@ -4,15 +4,17 @@ using System.Collections.Generic;
 public class PhysicsObject : MonoBehaviour
 {
     Rigidbody rb;
-    Vector3 lastvel;
+    Vector3 lastpos;
     bool collided = false;
     List<Collision> colliderNormals;
     public Vector3 GlobalGravity = new Vector3(0, 0, 0);
     public Vector3 gravity = new Vector3(0, 0, 0);
     public Vector3 velocity = new Vector3(0, 0, 0);
+    public Vector3 windforce = new Vector3(0, 0, 0);
     public float bouncyness = 1;
     public float friction = 0;
     public float mass = 1;
+    public float airResistance = 0;
 
     public float maxVelocity = 0;
 
@@ -25,17 +27,18 @@ public class PhysicsObject : MonoBehaviour
     void FixedUpdate()
     {
         gravity = CalculateGravity();
+        Vector3 wind = CalculateWind();
         if (colliderNormals.Count >= 1)
         {
             collided = true;
             velocity = Contact();
-            velocity = gravityCorrection();
+            velocity = forceCorrection(gravity+wind);
         }
         else
         {
             if (collided) {
 
-                Vector3 tempvel = velocity + gravity * Time.fixedDeltaTime;
+                Vector3 tempvel = velocity + (wind + gravity)* Time.fixedDeltaTime;
                 if (!spherecollision(tempvel))
                 {
                     velocity = tempvel;
@@ -44,15 +47,15 @@ public class PhysicsObject : MonoBehaviour
             }
             else
             {
-                velocity += gravity * Time.fixedDeltaTime;
+                velocity += (wind + gravity) * Time.fixedDeltaTime;
             }
         }
         if(maxVelocity != 0 && maxVelocity < velocity.magnitude)
         {
             velocity = velocity.normalized * maxVelocity;
         }
-        transform.position += velocity * Time.fixedDeltaTime;
-        lastvel = velocity;
+        Debug.DrawRay(transform.position, velocity.normalized,Color.red,4);
+        rb.MovePosition(transform.position += velocity * Time.fixedDeltaTime);
     }
 
     Vector3 CalculateGravity()
@@ -68,6 +71,11 @@ public class PhysicsObject : MonoBehaviour
             gravity += (direction.normalized / (distance * distance + 1f)) * obj.Mass * mass;
         }
         return gravity;
+    }
+
+    Vector3 CalculateWind() {
+        Vector3 total = windforce - velocity;
+        return airResistance * total;
     }
 
     bool spherecollision(Vector3 direction)
@@ -120,10 +128,10 @@ public class PhysicsObject : MonoBehaviour
         return tempvel;
     }
 
-    Vector3 gravityCorrection()
+    Vector3 forceCorrection(Vector3 force)
     {
         bool done = false;
-        Vector3 tempvel = velocity + gravity * Time.fixedDeltaTime;
+        Vector3 tempvel = velocity + force * Time.fixedDeltaTime;
         bool[] grounded = new bool[colliderNormals.Count];
         for (int i = 0; i < colliderNormals.Count; i++)
         {
@@ -148,9 +156,9 @@ public class PhysicsObject : MonoBehaviour
             }
             if (count > 50)
             {
-                return tempvel - gravity * Time.fixedDeltaTime * 0.5f;
+                return tempvel - force * Time.fixedDeltaTime;
             }
         }
-        return tempvel - gravity * Time.fixedDeltaTime * 0.5f;
+        return tempvel - force * Time.fixedDeltaTime;
     }
 }
