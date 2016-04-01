@@ -30,20 +30,20 @@ public class DemoUI1 : MonoBehaviour
 
     public void Update()
     {
-        Earth.Mass = EarthMass.value * 1000000;
+        Earth.Mass = EarthMass.value * 10000;
         if(Objects1.gameObject.activeInHierarchy)
         {
-            PhysicsObject1.mass = Moon1Mass.value;
+            PhysicsObject1.mass = Moon1Mass.value * 10;
             PhysicsObject1.bouncyness = Moon1Bouncyness.value;
         }
         if(Objects2.gameObject.activeInHierarchy)
         {
-            PhysicsObject2.mass = Moon2Mass.value;
+            PhysicsObject2.mass = Moon2Mass.value * 10;
             PhysicsObject2.bouncyness = Moon2Bouncyness.value;
         }
         if(Objects3.gameObject.activeInHierarchy)
         {
-            PhysicsObject3.mass = Moon3Mass.value;
+            PhysicsObject3.mass = Moon3Mass.value * 10;
             PhysicsObject3.bouncyness = Moon3Bouncyness.value;
         }
     }
