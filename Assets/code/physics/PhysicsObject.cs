@@ -186,7 +186,7 @@ public class PhysicsObject : MonoBehaviour
             }
             if(count > 20)
             {
-                return -velocity;
+                return -(velocity.normalized*tempvel.magnitude);
             }
         }
         return tempvel;
