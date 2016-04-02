@@ -29,13 +29,17 @@ public class PhysicsObject : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (bouncyness < 0.001)
+        {
+            bouncyness = 0.001f;
+        }
         gravity = CalculateGravity();
         Vector3 wind = CalculateWind();
         if (colliderNormals.Count >= 1)
         {
             collided = true;
             velocity = Contact();
-            velocity = forceCorrection(gravity+wind);
+            velocity = forceCorrection((gravity+wind)*Time.fixedDeltaTime);
         }
         else
         {
@@ -190,7 +194,7 @@ public class PhysicsObject : MonoBehaviour
     Vector3 forceCorrection(Vector3 force)
     {
         bool done = false;
-        Vector3 tempvel = velocity + force * Time.fixedDeltaTime;
+        Vector3 tempvel = velocity + force;
         bool[] grounded = new bool[colliderNormals.Count];
         for (int i = 0; i < colliderNormals.Count; i++)
         {
@@ -215,10 +219,10 @@ public class PhysicsObject : MonoBehaviour
             }
             if (count > 50)
             {
-                return tempvel - force * Time.fixedDeltaTime;
+                return tempvel - force;
             }
         }
-        return tempvel - force * Time.fixedDeltaTime;
+        return tempvel - force;
     }
 
     public void SetGlobalGravity(Vector3 grav) {
