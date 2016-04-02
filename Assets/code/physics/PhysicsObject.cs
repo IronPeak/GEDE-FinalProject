@@ -12,7 +12,6 @@ public class PhysicsObject : MonoBehaviour
     public Vector3 gravity = new Vector3(0, 0, 0);
     public Vector3 velocity = new Vector3(0, 0, 0);
     public Vector3 windforce = new Vector3(0, 0, 0);
-    public Vector3 externalForce = new Vector3(0, 0, 0);
     public float bouncyness = 1;
     public float friction = 0;
     public float mass = 1;
@@ -63,7 +62,6 @@ public class PhysicsObject : MonoBehaviour
             velocity = velocity.normalized * maxVelocity;
         }
         Debug.DrawRay(transform.position, velocity.normalized,Color.red,4);
-        externalForce = Vector3.zero;
         if (adj == 1)
         {
             adj = precalc(velocity);
@@ -85,12 +83,12 @@ public class PhysicsObject : MonoBehaviour
         float mag = (vel*Time.fixedDeltaTime).magnitude;
         // maximum allowed clipping limit by the ball
         float limit = 0.05f;
-        if (mag < limit) {
+        Vector3 edge = transform.position + vel.normalized * radius;
+        if (!(Physics.Linecast(edge, edge + vel * Time.fixedDeltaTime)))
+        {
             return 1;
         }
-        Vector3 edge = transform.position + vel.normalized * radius;
-        if (!(Physics.Linecast(edge, edge+vel*Time.fixedDeltaTime)))
-        {
+        if (mag < limit) {
             return 1;
         }
         
@@ -179,14 +177,15 @@ public class PhysicsObject : MonoBehaviour
                     PhysicsObject script = coll.gameObject.GetComponent<PhysicsObject>();
                     if (script != null)
                     {
-                        script.AddForce(-(1 - bouncyness) * proj);
+                        script.AddForce(-(1 - bouncyness) * proj );
                     }
                     done = false;
                 }
             }
-            if(count > 20)
+            //if collision cant be solved properly in x steps just return what you have
+            if(count > 30)
             {
-                return -(velocity.normalized*tempvel.magnitude);
+                return tempvel;
             }
         }
         return tempvel;
@@ -195,9 +194,14 @@ public class PhysicsObject : MonoBehaviour
     Vector3 forceCorrection(Vector3 force)
     {
         bool done = false;
-        bool noConflict = true;
         Vector3 tempvel = velocity + force;
         int count = 0;
+        //this shortcut bypasses an ugly bug but does not cover it for the rare case of Count == 2 (very unlikely that the bug occurs)
+        if (colliderNormals.Count == 1) {
+            if (Vector3.Dot(colliderNormals[0].contacts[0].normal, tempvel) >= 0) {
+                return tempvel - force;
+            }
+        }
         while (!done)
         {
             count++;
@@ -212,7 +216,6 @@ public class PhysicsObject : MonoBehaviour
                     Vector3 proj = Vector3.Project(neg, normal.normalized);
                     tempvel = tempvel + proj;
                     done = false;
-                    noConflict = false;
                 }
             }
             if (count > 50)
@@ -220,14 +223,7 @@ public class PhysicsObject : MonoBehaviour
                 return tempvel - force;
             }
         }
-        if (noConflict)
-        {
-            return tempvel;
-        }
-        else {
-
-            return tempvel - force;
-        }
+        return tempvel - force;
     }
 
     public void SetGlobalGravity(Vector3 grav) {
