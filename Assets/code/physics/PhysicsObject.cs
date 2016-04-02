@@ -12,6 +12,7 @@ public class PhysicsObject : MonoBehaviour
     public Vector3 gravity = new Vector3(0, 0, 0);
     public Vector3 velocity = new Vector3(0, 0, 0);
     public Vector3 windforce = new Vector3(0, 0, 0);
+    public Vector3 externalForce = new Vector3(0, 0, 0);
     public float bouncyness = 1;
     public float friction = 0;
     public float mass = 1;
@@ -22,7 +23,6 @@ public class PhysicsObject : MonoBehaviour
     void Awake()
     {
         radius = transform.localScale.x * 0.5f;
-        //Debug.Log(radius);
         colliderNormals = new List<Collision>();
         rb = GetComponent<Rigidbody>();
     }
@@ -43,7 +43,8 @@ public class PhysicsObject : MonoBehaviour
         }
         else
         {
-            if (collided) {
+            if (collided)
+            {
 
                 Vector3 tempvel = velocity + (wind + gravity)* Time.fixedDeltaTime;
                 if (!spherecollision(tempvel))
@@ -62,16 +63,15 @@ public class PhysicsObject : MonoBehaviour
             velocity = velocity.normalized * maxVelocity;
         }
         Debug.DrawRay(transform.position, velocity.normalized,Color.red,4);
+        externalForce = Vector3.zero;
         if (adj == 1)
         {
             adj = precalc(velocity);
-           // Debug.Log("adj:" + velocity * adj);
             rb.MovePosition(transform.position += velocity * adj * Time.fixedDeltaTime);
         }
         else
         {
             rb.MovePosition(transform.position += velocity * adj * Time.fixedDeltaTime);
-            //Debug.Log("reverse adj:" + velocity * adj);
             adj = 1;
         }
 
@@ -103,21 +103,17 @@ public class PhysicsObject : MonoBehaviour
             {
                 curr = search;
                 search -= scale;
-                //Debug.Log("search decreased: " + search);
                 if (curr*mag < limit)
                 {
-                  //  Debug.Log("broke out of loop");
                     break;
                 }
             }
             else
             {
                 search += scale;
-                //Debug.Log("search increased: " + search);
             }
             scale *= 0.5f;
         }
-        //Debug.Log(curr);
         return curr;
     }
 
@@ -180,6 +176,11 @@ public class PhysicsObject : MonoBehaviour
                     Vector3 neg = -tempvel;
                     Vector3 proj = Vector3.Project(neg, normal.normalized);
                     tempvel = (tempvel + proj) * (1 - friction) + proj * bouncyness;
+                    PhysicsObject script = coll.gameObject.GetComponent<PhysicsObject>();
+                    if (script != null)
+                    {
+                        script.AddForce(-(1 - bouncyness) * proj);
+                    }
                     done = false;
                 }
             }
@@ -194,12 +195,8 @@ public class PhysicsObject : MonoBehaviour
     Vector3 forceCorrection(Vector3 force)
     {
         bool done = false;
+        bool noConflict = true;
         Vector3 tempvel = velocity + force;
-        bool[] grounded = new bool[colliderNormals.Count];
-        for (int i = 0; i < colliderNormals.Count; i++)
-        {
-            grounded[i] = false;
-        }
         int count = 0;
         while (!done)
         {
@@ -208,13 +205,14 @@ public class PhysicsObject : MonoBehaviour
             for (int i = 0; i < colliderNormals.Count; i++)
             {
                 Vector3 normal = colliderNormals[i].contacts[0].normal;
+                
                 if (Vector3.Dot((tempvel), normal) < 0)
                 {
                     Vector3 neg = -tempvel;
                     Vector3 proj = Vector3.Project(neg, normal.normalized);
                     tempvel = tempvel + proj;
-                    grounded[i] = true;
                     done = false;
+                    noConflict = false;
                 }
             }
             if (count > 50)
@@ -222,7 +220,14 @@ public class PhysicsObject : MonoBehaviour
                 return tempvel - force;
             }
         }
-        return tempvel - force;
+        if (noConflict)
+        {
+            return tempvel;
+        }
+        else {
+
+            return tempvel - force;
+        }
     }
 
     public void SetGlobalGravity(Vector3 grav) {
@@ -232,7 +237,7 @@ public class PhysicsObject : MonoBehaviour
     public void AddForce(Vector3 force) {
         velocity += force;
     }
-
+    
     public void SetVelocity(Vector3 vel) {
         velocity = vel;
     }
