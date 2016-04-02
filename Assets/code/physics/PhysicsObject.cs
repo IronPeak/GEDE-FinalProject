@@ -199,7 +199,7 @@ public class PhysicsObject : MonoBehaviour
         //this shortcut bypasses an ugly bug but does not cover it for the rare case of Count == 2 (very unlikely that the bug occurs)
         if (colliderNormals.Count == 1) {
             if (Vector3.Dot(colliderNormals[0].contacts[0].normal, tempvel) >= 0) {
-                return tempvel;
+                return tempvel - force;
             }
         }
         while (!done)
