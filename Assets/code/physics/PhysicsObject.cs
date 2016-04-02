@@ -61,7 +61,7 @@ public class PhysicsObject : MonoBehaviour
         {
             velocity = velocity.normalized * maxVelocity;
         }
-        Debug.DrawRay(transform.position, velocity.normalized,Color.red,4);
+        //Debug.DrawRay(transform.position, velocity.normalized,Color.red,4);
         if (adj == 1)
         {
             adj = precalc(velocity);
@@ -196,11 +196,19 @@ public class PhysicsObject : MonoBehaviour
         bool done = false;
         Vector3 tempvel = velocity + force;
         int count = 0;
-        //this shortcut bypasses an ugly bug but does not cover it for the rare case of Count == 2 (very unlikely that the bug occurs)
-        if (colliderNormals.Count == 1) {
-            if (Vector3.Dot(colliderNormals[0].contacts[0].normal, tempvel) >= 0) {
-                return tempvel - force;
+        bool conflict = false;
+        foreach (Collision coll in colliderNormals)
+        {
+
+            Vector3 normal = coll.contacts[0].normal;
+            if (Vector3.Dot(normal, force) <= -0.0001)
+            {
+                conflict = true;
+                break;
             }
+        }
+        if (!conflict) {
+            return tempvel;
         }
         while (!done)
         {
