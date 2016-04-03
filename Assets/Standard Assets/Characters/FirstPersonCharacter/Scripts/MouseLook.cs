@@ -30,6 +30,12 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         public void LookRotation(Transform character, Transform camera)
         {
+
+            if(Input.GetKey(KeyCode.Escape))
+            {
+                return;
+            }
+
             float yRot = CrossPlatformInputManager.GetAxis("Mouse X") * XSensitivity;
             float xRot = CrossPlatformInputManager.GetAxis("Mouse Y") * YSensitivity;
 
@@ -57,6 +63,11 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         public void SetCursorLock(bool value)
         {
+            if(Input.GetKey(KeyCode.Escape))
+            {
+                return;
+            }
+
             lockCursor = value;
             if(!lockCursor)
             {//we force unlock the cursor if the user disable the cursor locking helper
@@ -67,6 +78,10 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         public void UpdateCursorLock()
         {
+            if(Input.GetKey(KeyCode.Escape))
+            {
+                return;
+            }
             //if the user set "lockCursor" we check & properly lock the cursos
             if (lockCursor)
                 InternalLockUpdate();
@@ -74,6 +89,10 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         private void InternalLockUpdate()
         {
+            if(Input.GetKey(KeyCode.Escape))
+            {
+                return;
+            }
             if(Input.GetKeyUp(KeyCode.Escape))
             {
                 m_cursorIsLocked = false;
