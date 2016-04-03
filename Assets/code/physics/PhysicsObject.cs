@@ -76,43 +76,18 @@ public class PhysicsObject : MonoBehaviour
     }
 
     //used to scale down velocity to avoid ugly clipping
-    // disabled for now since it doesnt work 100%
     
     float precalc(Vector3 vel)
     {
         float mag = (vel*Time.fixedDeltaTime).magnitude;
-        // maximum allowed clipping limit by the ball
-        float limit = 0.05f;
         Vector3 edge = transform.position + vel.normalized * radius;
-        if (!(Physics.Linecast(edge, edge + vel * Time.fixedDeltaTime)))
+        RaycastHit hitinfo;
+        if (!(Physics.Linecast(edge, edge + vel * Time.fixedDeltaTime,out hitinfo)))
         {
             return 1;
         }
-        if (mag < limit) {
-            return 1;
-        }
-        
-        int iterations = 10;
-        float scale = 0.25f;
-        float search = 0.5f;
-        float curr = 1.0f;
-        for (int i = 0; i < iterations; i++) {
-            if ((Physics.Linecast(edge, edge + search*vel * Time.fixedDeltaTime)))
-            {
-                curr = search;
-                search -= scale;
-                if (curr*mag < limit)
-                {
-                    break;
-                }
-            }
-            else
-            {
-                search += scale;
-            }
-            scale *= 0.5f;
-        }
-        return curr;
+        Vector3 diff = (hitinfo.point - edge) * 1.001f;
+        return diff.magnitude / mag;
     }
 
     Vector3 CalculateGravity()
