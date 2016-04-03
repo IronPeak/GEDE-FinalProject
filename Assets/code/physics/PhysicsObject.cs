@@ -96,6 +96,12 @@ public class PhysicsObject : MonoBehaviour
         for(int i = 0; i < GravityObject.Objects.Count; i++)
         {
             GravityObject obj = GravityObject.Objects[i];
+            if(obj == null)
+            {
+                GravityObject.Objects.RemoveAt(i);
+                i--;
+                continue;
+            }
             if(obj.gameObject == gameObject)
                 continue;
             Vector3 direction = obj.transform.position - transform.position;
